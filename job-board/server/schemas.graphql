@@ -1,0 +1,43 @@
+type Query {
+    company(id: ID!):Company
+    job(id: ID!):Job 
+    jobs(limit: Int, offset: Int): JobSubList
+}
+
+type Mutation {
+    createJob(input: CreateJob!): Job
+    deleteJob(id: ID!): Job
+    updateJob(input: UpdateJob!): Job
+}
+
+type Company {
+    id: ID!
+    name: String
+    description: String
+    jobs: [Job!]!
+}
+""" This is a description of Job type """
+type Job {
+    id: ID!
+    title: String!
+    company: Company!
+    """This is a description of date field """
+    date: String!
+    description: String
+}
+
+type JobSubList {
+    items: [Job!]!
+    totalCount: Int!
+}
+
+input CreateJob {
+    title: String!
+    description: String
+}
+
+input UpdateJob {
+    id: ID!
+    title: String!
+    description: String
+}
