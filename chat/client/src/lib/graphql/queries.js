@@ -19,3 +19,13 @@ export const addMessageMutation = gql`
     }
   }
 `;
+
+export const messageAddedSubscription = gql`
+  subscription MessageAddedSubscription {
+    message: addMessage {
+      id
+      user
+      text
+    }
+  }
+`;

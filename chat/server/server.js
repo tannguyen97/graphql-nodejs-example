@@ -3,8 +3,13 @@ import { expressMiddleware as apolloMiddleware } from '@apollo/server/express4';
 import cors from 'cors';
 import express from 'express';
 import { readFile } from 'node:fs/promises';
-import { authMiddleware, handleLogin } from './auth.js';
+import { authMiddleware, handleLogin, decodeToken } from './auth.js';
 import { resolvers } from './resolvers.js';
+import { createServer as createHttpServer } from 'http';
+// import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
+import { makeExecutableSchema } from '@graphql-tools/schema';
+import { WebSocketServer } from 'ws';
+import { useServer as useWsServer } from 'graphql-ws/lib/use/ws';
 
 const PORT = 9000;
 
@@ -20,14 +25,31 @@ function getContext({ req }) {
   return {};
 }
 
+function getWsContext({ connectionParams }) {
+  const accessToken = connectionParams?.accessToken;
+  if(accessToken){
+    const payload = decodeToken(accessToken);
+    return { user: payload.sub };
+  }
+
+  return {};
+}
+
+const httpServer = createHttpServer(app);
+
 const typeDefs = await readFile('./schema.graphql', 'utf8');
-const apolloServer = new ApolloServer({ typeDefs, resolvers });
+const schema = makeExecutableSchema({ typeDefs, resolvers });
+
+const apolloServer = new ApolloServer({ schema });
 await apolloServer.start();
 app.use('/graphql', authMiddleware, apolloMiddleware(apolloServer, {
   context: getContext,
 }));
 
-app.listen({ port: PORT }, () => {
+const wsServer = new WebSocketServer({ server: httpServer, path: '/graphql'});
+useWsServer({ schema, context: getWsContext}, wsServer);
+
+httpServer.listen({ port: PORT }, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`GraphQL endpoint: http://localhost:${PORT}/graphql`);
 });
